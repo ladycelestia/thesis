@@ -138,7 +138,7 @@ def merge_results(dataframes):
 def process_region(lmp_file,hvdc_file,reserve_file,weatherpath,regionname,weatherregion,date_start,date_end):
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    pickle_file = os.path.join(script_dir, "Final Data", f"{regionname}_Daily_Complete.pkl")
+    pickle_file = os.path.join(script_dir, f"{regionname}_Daily_Complete.pkl")
     
     if os.path.exists(pickle_file):
             with open(pickle_file, "rb") as f:
@@ -167,10 +167,8 @@ def process_region(lmp_file,hvdc_file,reserve_file,weatherpath,regionname,weathe
     
 
 def load_data(regionname):
-    
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    pickle_file = os.path.join(script_dir, "Final Data", f"{regionname}_Daily_Complete.pkl")
-    
+    pickle_file = os.path.join(script_dir, f"{regionname}_Daily_Complete.pkl")
     if os.path.exists(pickle_file):
             with open(pickle_file, "rb") as f:
                 df = pickle.load(f)
@@ -178,3 +176,24 @@ def load_data(regionname):
     else:
         print(f"Pickle file for {regionname} not found.")
         return None
+    
+def split_data(X, use_val=True):
+    if use_val:
+        train_size = int(0.6 * len(X))
+        val_size = int(0.2 * len(X))
+
+        train = X[:train_size]
+        val = X[train_size:train_size + val_size]
+        test = X[train_size + val_size:]
+
+        return train, val, test
+    
+    else:
+        train_size = int(0.8 * len(X))
+
+        train = X[:train_size]
+        test = X[train_size:]
+
+        return train, test
+
+
