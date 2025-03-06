@@ -96,4 +96,38 @@ def transform_data(data, regionname, use_val=True):
 
     return full_transformed
 
+def inverse_transform_data(data, regionname):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    pipeline_files = {
+        "boxcox": os.path.join(script_dir, "Final Data", f"{regionname}__box-cox_pipeline.pkl"),
+        "yeojohnson": os.path.join(script_dir, "Final Data", f"{regionname}__yeo-johnson_pipeline.pkl"),
+        "minmax": os.path.join(script_dir, "Final Data", f"{regionname}__minmax_pipeline.pkl")
+    }
+    
+    pipelines = {}
+    for method, file in pipeline_files.items():
+        if os.path.exists(file):
+            with open(file, "rb") as f:
+                pipelines[method] = pickle.load(f)
+        else:
+            raise FileNotFoundError(f"Pipeline file {file} not found. Ensure transformations were applied first.")
+    
+    minmax_cols = pipelines["minmax"].named_steps["minmax_scaler"].feature_names_in_
+    boxcox_cols = pipelines["boxcox"].named_steps["power_transformer"].feature_names_in_
+    yeojohnson_cols = pipelines["yeojohnson"].named_steps["power_transformer"].feature_names_in_
+    
+    def apply_inverse_transform(df):
+        inverse_parts = {
+            "minmax": pd.DataFrame(pipelines["minmax"].inverse_transform(df[minmax_cols]), 
+                                     columns=minmax_cols, index=df.index),
+            "boxcox": pd.DataFrame(pipelines["boxcox"].inverse_transform(df[boxcox_cols]), 
+                                     columns=boxcox_cols, index=df.index),
+            "yeojohnson": pd.DataFrame(pipelines["yeojohnson"].inverse_transform(df[yeojohnson_cols]), 
+                                         columns=yeojohnson_cols, index=df.index)
+        }
+        return pd.concat(inverse_parts.values(), axis=1)[data.columns]
+    
+    return apply_inverse_transform(data)
+
 

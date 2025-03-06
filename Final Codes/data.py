@@ -355,4 +355,59 @@ class DataTransformer:
             pickle.dump(full_transformed, f)
         
         return full_transformed
+    
+    def inverse_transform_data(self, data):
+        """
+        Apply inverse transform to data using stored pipelines.
+        
+        Parameters:
+        data (pd.DataFrame): DataFrame with transformed data
+        
+        Returns:
+        pd.DataFrame: DataFrame with original (inverse transformed) data
+        """
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+       
+        pipeline_files = {
+            "boxcox": os.path.join(script_dir, "Final Data", f"{self.region_name}__box-cox_pipeline.pkl"),
+            "yeojohnson": os.path.join(script_dir, "Final Data", f"{self.region_name}__yeo-johnson_pipeline.pkl"),
+            "minmax": os.path.join(script_dir, "Final Data", f"{self.region_name}__minmax_pipeline.pkl")
+        }
+       
+        # Load pipelines if not already loaded
+        if not self.pipelines:
+            self.pipelines = {}
+            for method, file in pipeline_files.items():
+                if os.path.exists(file):
+                    with open(file, "rb") as f:
+                        self.pipelines[method] = pickle.load(f)
+                else:
+                    raise FileNotFoundError(f"Pipeline file {file} not found. Ensure transformations were applied first.")
+       
+        # Get column names for each transformation method
+        minmax_cols = self.pipelines["minmax"].named_steps["minmax_scaler"].feature_names_in_
+        boxcox_cols = self.pipelines["boxcox"].named_steps["power_transformer"].feature_names_in_
+        yeojohnson_cols = self.pipelines["yeojohnson"].named_steps["power_transformer"].feature_names_in_
+       
+        # Apply inverse transformations
+        inverse_parts = {
+            "minmax": pd.DataFrame(
+                self.pipelines["minmax"].inverse_transform(data[minmax_cols]),
+                columns=minmax_cols, 
+                index=data.index
+            ),
+            "boxcox": pd.DataFrame(
+                self.pipelines["boxcox"].inverse_transform(data[boxcox_cols]),
+                columns=boxcox_cols, 
+                index=data.index
+            ),
+            "yeojohnson": pd.DataFrame(
+                self.pipelines["yeojohnson"].inverse_transform(data[yeojohnson_cols]),
+                columns=yeojohnson_cols, 
+                index=data.index
+            )
+        }
+        
+        # Combine the inverse transformed parts
+        return pd.concat(inverse_parts.values(), axis=1)[data.columns]
 
