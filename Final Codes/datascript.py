@@ -5,7 +5,7 @@ import pickle
 import os
 import pandas as pd
 
-def price_weighted_average(input_file, resource_filter, price_column, output_column, date_start=None, date_end=None, region_filter=None, commodity_filter=None, ):
+def price_weighted_average(input_file, resource_filter, price_column, output_column, date_start=None, date_end=None, region_filter=None, commodity_filter=None):
     usecols = ['RUN_TIME', 'RESOURCE_TYPE', 'REGION_NAME', price_column, 'SCHED_MW']
     if commodity_filter:
         usecols.append('COMMODITY_TYPE')
@@ -173,17 +173,23 @@ def process_region(lmp_file,hvdc_file,reserve_file,demand_file,weatherpath,regio
     return final
     
 
-def load_data(regionname, transformed=False):
+def load_data(regionname, target_label,features=False, transformed=False):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     folder = "Final Data"
-    
-    filename = f"{regionname}_Transformed_Daily_Complete.pkl" if transformed else f"{regionname}_Daily_Complete.pkl"
+    if features:
+        filename = f"{regionname}_{target_label}_Transformed_Features.pkl" if transformed else f"{regionname}_Daily_Complete.pkl"
+    else:
+        filename = f"{regionname}_{target_label}_Transformed_Target.pkl" if transformed else f"{regionname}_Daily_Complete.pkl"
     pickle_file = os.path.join(script_dir, folder, filename)
     
     if os.path.exists(pickle_file):
         with open(pickle_file, "rb") as f:
             df = pickle.load(f)
+
+        if features==True & transformed==False:
+            df = df[[target_label]]      
         return df
+    
     else:
         print("Data not found")
         return None
